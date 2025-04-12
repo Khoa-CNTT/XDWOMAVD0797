@@ -4,9 +4,10 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hungry Hub</title>
+    <title>HungryHub</title>
     <link href="./assets/img/favicon.png" rel="icon" type="image/x-icon" />
     <link rel="stylesheet" href="./assets/css/main.css" />
+    <link rel="stylesheet" href="./assets/css/toast-message.css" />
     <link
       rel="stylesheet"
       href="./assets/font/font-awesome-pro-v6-6.2.0/css/all.min.css"
@@ -17,6 +18,33 @@
       <div class="header-top">
         <div class="container">
           <div class="header-top-left">
+            <ul class="header-top-list">
+              <li>
+                <a href=""
+                  ><i class="fa-regular fa-phone"></i> 0123 456 789 (miễn
+                  phí)</a
+                >
+              </li>
+              <li>
+                <a href=""
+                  ><i class="fa-light fa-location-dot"></i> Xem vị trí cửa
+                  hàng</a
+                >
+              </li>
+            </ul>
+          </div>
+          <div class="header-top-right">
+            <ul class="header-top-list">
+              <li><a href="">Giới thiệu</a></li>
+              <li><a href="">Cửa hàng</a></li>
+              <li><a href="">Chính sách</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="header-middle">
+        <div class="container">
+          <div class="header-middle-left">
             <div class="header-logo">
               <a href="">
                 <img
@@ -27,7 +55,7 @@
               </a>
             </div>
           </div>
-          <div class="header-top-center">
+          <div class="header-middle-center">
             <form action="" class="form-search">
               <span class="search-btn"
                 ><i class="fa-light fa-magnifying-glass"></i
@@ -43,10 +71,10 @@
               </button>
             </form>
           </div>
-          <div class="header-top-right">
-            <ul class="header-top-right-list">
+          <div class="header-middle-right">
+            <ul class="header-middle-right-list">
               <li
-                class="header-top-right-item dnone open"
+                class="header-middle-right-item dnone open"
                 onclick="openSearchMb()"
               >
                 <div class="cart-icon-menu">
@@ -54,14 +82,14 @@
                 </div>
               </li>
               <li
-                class="header-top-right-item close"
+                class="header-middle-right-item close"
                 onclick="closeSearchMb()"
               >
                 <div class="cart-icon-menu">
                   <i class="fa-light fa-circle-xmark"></i>
                 </div>
               </li>
-              <li class="header-top-right-item dropdown open">
+              <li class="header-middle-right-item dropdown open">
                 <i class="fa-light fa-user"></i>
                 <div class="auth-container">
                   <span class="text-dndk">Đăng nhập / Đăng ký</span>
@@ -69,7 +97,7 @@
                     >Tài khoản <i class="fa-sharp fa-solid fa-caret-down"></i
                   ></span>
                 </div>
-                <ul class="header-top-right-menu">
+                <ul class="header-middle-right-menu">
                   <li>
                     <a id="login" href="javascript:;"
                       ><i class="fa-light fa-right-to-bracket"></i> Đăng nhập</a
@@ -82,7 +110,7 @@
                   </li>
                 </ul>
               </li>
-              <li class="header-top-right-item open" onclick="openCart()">
+              <li class="header-middle-right-item open" onclick="openCart()">
                 <div class="cart-icon-menu">
                   <i class="fa-light fa-basket-shopping"></i>
                   <span class="count-product-cart">0</span>
@@ -103,12 +131,12 @@
           <li class="menu-list-item dropdown">
             <a href="javascript:;" class="menu-link">Danh sách món ăn</a>
             <ul class="submenu">
-              <li onclick="showCategory('Món Hàn')">Món Hàn</li>
-              <li onclick="showCategory('Món Nhật')">Món Nhật</li>
-              <li onclick="showCategory('Món Việt')">Món Việt</li>
+              <li onclick="showCategory('Món mặn')">Món mặn</li>
+              <li onclick="showCategory('Món chay')">Món chay</li>
               <li onclick="showCategory('Món Lẩu')">Món Lẩu</li>
               <li onclick="showCategory('Món Ăn Vặt')">Món Ăn Vặt</li>
               <li onclick="showCategory('Món Tráng Miệng')">Món Tráng Miệng</li>
+              <li onclick="showCategory('Nước uống')">Nước uống</li>
             </ul>
           </li>
           <li class="menu-list-item">
@@ -133,9 +161,8 @@
             onchange="searchProducts()"
           >
             <option>Tất cả</option>
-            <option>Món Hàn</option>
-            <option>Món Nhật</option>
-            <option>Món Việt</option>
+            <option>Món mặn</option>
+            <option>Món chay</option>
             <option>Món ăn vặt</option>
             <option>Món tráng miệng</option>
             <option>Nước uống</option>
@@ -563,7 +590,7 @@
               <h3 class="widget-title">Về chúng tôi</h3>
               <div class="widget-row-col-content">
                 <p>
-                  Hungry Hub là thương hiệu được thành lập vào năm 2025 với tiêu
+                  HungryHub là thương hiệu được thành lập vào năm 2025 với tiêu
                   chí đặt chất lượng sản phẩm lên hàng đầu.
                 </p>
               </div>
@@ -668,6 +695,7 @@
                     <i class="fa-regular fa-location-dot"></i>
                   </div>
                   <div class="contact-content">
+                    <!-- <i class="fi fi-sr-land-layer-location"></i> -->
                     <span
                       >03 Quang Trung, Phường Hải Châu, Quận Hải Châu, TP.Đà Nẵng</span
                     >
@@ -701,7 +729,7 @@
     <div class="copyright-wrap">
       <div class="container">
         <div class="copyright-content">
-          <p>Copyright 2025 Hungry Hub. All Rights Reserved.</p>
+          <p>Copyright 2025 HungryHub. All Rights Reserved.</p>
         </div>
       </div>
     </div>
@@ -826,7 +854,7 @@
                     class="radio"
                   />
                   <label for="chinhanh-2"
-                    >254 Nguyễn Văn Linh, Phường Thạc Gián, Quận Thanh Khê</label
+                    >04 Tôn Đức Thắng, Phường Hòa Cường Bắc, Quận Hòa Vang</label
                   >
                 </div>
               </div>
@@ -903,5 +931,6 @@
     </div>
     <div id="toast"></div>
     <script src="./js/main.js"></script>
+    <script src="./js/toast-message.js"></script>
   </body>
 </html>
