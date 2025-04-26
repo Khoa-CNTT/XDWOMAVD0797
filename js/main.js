@@ -97,15 +97,47 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 //Xem chi tiet san pham
-function detailProduct(index) {
+async function detailProduct(index, event) {
   let modal = document.querySelector(".modal.product-detail");
-  let products = JSON.parse(localStorage.getItem("products"));
-  event.preventDefault();
-  let infoProduct = products.find((sp) => {
-    return sp.id === index;
-  });
-  let modalHtml = `<div class="modal-header">
-    <img class="product-image" src="${infoProduct.img}" alt="">
+  if (!modal) {
+    console.error("Product detail modal not found");
+    return;
+  }
+  
+  try {
+    // Gọi API để lấy thông tin sản phẩm
+    console.log('Calling API for product ID:', index);
+    const response = await fetch(`/api/products/${index}`);
+    console.log('API Response status:', response.status);
+    const data = await response.json();
+    console.log('API Response data:', data);
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Không thể lấy thông tin sản phẩm');
+    }
+    
+    // Kiểm tra xem dữ liệu có tồn tại không
+    if (!data) {
+      console.error("Product not found:", index);
+      toast({
+        title: "Error",
+        message: `Không tìm thấy sản phẩm có ID: ${index}`,
+        type: "error",
+        duration: 3000,
+      });
+      return;
+    }
+
+    const infoProduct = data;
+    console.log('Product info:', infoProduct);
+    
+    if (event) {
+      event.preventDefault();
+    }
+
+    // Tạo nội dung modal
+    let modalHtml = `<div class="modal-header">
+      <img class="product-image" src="${infoProduct.img}" alt="${infoProduct.title}">
     </div>
     <div class="modal-body">
         <h2 class="product-title">${infoProduct.title}</h2>
@@ -119,7 +151,7 @@ function detailProduct(index) {
                 <input class="plus is-form" type="button" value="+" onclick="increasingNumber(this)">
             </div>
         </div>
-        <p class="product-description">${infoProduct.desc}</p>
+        <p class="product-description">${infoProduct.description || ''}</p>
     </div>
     <div class="notebox">
             <p class="notebox-title">Ghi chú</p>
@@ -131,41 +163,59 @@ function detailProduct(index) {
             <span class="price">${vnd(infoProduct.price)}</span>
         </div>
         <div class="modal-footer-control">
-            <button class="button-dathangngay" data-product="${
-              infoProduct.id
-            }">Đặt hàng ngay</button>
+            <button class="button-dathangngay" data-product="${infoProduct.id}">Đặt hàng ngay</button>
             <button class="button-dat" id="add-cart" onclick="animationCart()"><i class="fa-light fa-basket-shopping"></i></button>
         </div>
     </div>`;
-  document.querySelector("#product-detail-content").innerHTML = modalHtml;
-  modal.classList.add("open");
-  body.style.overflow = "hidden";
-  //Cap nhat gia tien khi tang so luong san pham
-  let tgbtn = document.querySelectorAll(".is-form");
-  let qty = document.querySelector(".product-control .input-qty");
-  let priceText = document.querySelector(".price");
-  tgbtn.forEach((element) => {
-    element.addEventListener("click", () => {
-      let price = infoProduct.price * parseInt(qty.value);
-      priceText.innerHTML = vnd(price);
-    });
-  });
-  // Them san pham vao gio hang
-  let productbtn = document.querySelector(".button-dat");
-  productbtn.addEventListener("click", (e) => {
-    if (localStorage.getItem("currentuser")) {
-      addCart(infoProduct.id);
-    } else {
-      toast({
-        title: "Warning",
-        message: "Chưa đăng nhập tài khoản !",
-        type: "warning",
-        duration: 3000,
-      });
+
+    // Hiển thị modal
+    let modalContent = document.querySelector("#product-detail-content");
+    if (!modalContent) {
+      console.error("Product detail content element not found");
+      return;
     }
-  });
-  // Mua ngay san pham
-  dathangngay();
+    
+    modalContent.innerHTML = modalHtml;
+    modal.classList.add("open");
+    document.body.style.overflow = "hidden";
+
+    // Update price when quantity changes
+    let tgbtn = document.querySelectorAll(".is-form");
+    let qty = document.querySelector(".product-control .input-qty");
+    let priceText = document.querySelector(".price");
+    tgbtn.forEach((element) => {
+      element.addEventListener("click", () => {
+        let price = infoProduct.price * parseInt(qty.value);
+        priceText.innerHTML = vnd(price);
+      });
+    });
+
+    // Add product to cart
+    let productbtn = document.querySelector(".button-dat");
+    productbtn.addEventListener("click", (e) => {
+      if (localStorage.getItem("currentuser")) {
+        addCart(infoProduct.id);
+      } else {
+        toast({
+          title: "Warning",
+          message: "Chưa đăng nhập tài khoản !",
+          type: "warning",
+          duration: 3000,
+        });
+      }
+    });
+
+    // Buy product immediately
+    // dathangngay();
+  } catch (error) {
+    console.error('Error in detailProduct:', error);
+    toast({
+      title: "Error",
+      message: "Lỗi khi tải thông tin sản phẩm: " + error.message,
+      type: "error",
+      duration: 3000,
+    });
+  }
 }
 
 function animationCart() {
@@ -203,43 +253,47 @@ function addCart(index) {
 }
 
 //Show gio hang
-function showCart() {
+async function showCart() {
   if (localStorage.getItem("currentuser") != null) {
     let currentuser = JSON.parse(localStorage.getItem("currentuser"));
     if (currentuser.cart.length != 0) {
       document.querySelector(".gio-hang-trong").style.display = "none";
       document.querySelector("button.thanh-toan").classList.remove("disabled");
       let productcarthtml = "";
-      currentuser.cart.forEach((item) => {
-        let product = getProduct(item);
+      
+      // Sử dụng Promise.all để đợi tất cả các sản phẩm được tải
+      const products = await Promise.all(currentuser.cart.map(async (item) => {
+        const product = await getProduct(item);
+        return {
+          ...product,
+          soluong: item.soluong,
+          note: item.note
+        };
+      }));
+      
+      products.forEach((product) => {
         productcarthtml += `<li class="cart-item" data-id="${product.id}">
-                <div class="cart-item-info">
-                    <p class="cart-item-title">
-                        ${product.title}
-                    </p>
-                    <span class="cart-item-price price" data-price="${
-                      product.price
-                    }">
-                    ${vnd(parseInt(product.price))}
-                    </span>
-                </div>
-                <p class="product-note"><i class="fa-light fa-pencil"></i><span>${
-                  product.note
-                }</span></p>
-                <div class="cart-item-control">
-                    <button class="cart-item-delete" onclick="deleteCartItem(${
-                      product.id
-                    },this)">Xóa</button>
-                    <div class="buttons_added">
-                        <input class="minus is-form" type="button" value="-" onclick="decreasingNumber(this)">
-                        <input class="input-qty" max="100" min="1" name="" type="number" value="${
-                          product.soluong
-                        }">
-                        <input class="plus is-form" type="button" value="+" onclick="increasingNumber(this)">
-                    </div>
-                </div>
-            </li>`;
+          <div class="cart-item-info">
+            <img src="${product.img}" alt="${product.title}" class="cart-item-img">
+            <div class="cart-item-details">
+              <p class="cart-item-title">${product.title}</p>
+              <span class="cart-item-price price" data-price="${product.price}">
+                ${vnd(parseInt(product.price))}
+              </span>
+            </div>
+          </div>
+          <p class="product-note"><i class="fa-light fa-pencil"></i><span>${product.note}</span></p>
+          <div class="cart-item-control">
+            <button class="cart-item-delete" onclick="deleteCartItem(${product.id},this)">Xóa</button>
+            <div class="buttons_added">
+              <input class="minus is-form" type="button" value="-" onclick="decreasingNumber(this)">
+              <input class="input-qty" max="100" min="1" name="" type="number" value="${product.soluong}">
+              <input class="plus is-form" type="button" value="+" onclick="increasingNumber(this)">
+            </div>
+          </div>
+        </li>`;
       });
+      
       document.querySelector(".cart-list").innerHTML = productcarthtml;
       updateCartTotal();
       saveAmountCart();
@@ -279,17 +333,26 @@ function deleteCartItem(id, el) {
 }
 
 //Update cart total
-function updateCartTotal() {
-  document.querySelector(".text-price").innerText = vnd(getCartTotal());
+async function updateCartTotal() {
+  const total = await getCartTotal();
+  document.querySelector(".text-price").innerText = vnd(total);
 }
 
 // Lay tong tien don hang
-function getCartTotal() {
+async function getCartTotal() {
   let currentUser = JSON.parse(localStorage.getItem("currentuser"));
   let tongtien = 0;
   if (currentUser != null) {
-    currentUser.cart.forEach((item) => {
-      let product = getProduct(item);
+    // Sử dụng Promise.all để đợi tất cả các sản phẩm được tải
+    const products = await Promise.all(currentUser.cart.map(async (item) => {
+      const product = await getProduct(item);
+      return {
+        ...product,
+        soluong: item.soluong
+      };
+    }));
+    
+    products.forEach((product) => {
       tongtien += parseInt(product.soluong) * parseInt(product.price);
     });
   }
@@ -297,14 +360,41 @@ function getCartTotal() {
 }
 
 // Get Product
-function getProduct(item) {
-  let products = JSON.parse(localStorage.getItem("products"));
-  let infoProductCart = products.find((sp) => item.id == sp.id);
-  let product = {
-    ...infoProductCart,
-    ...item,
-  };
-  return product;
+async function getProduct(item) {
+  try {
+    // Gọi API để lấy thông tin sản phẩm
+    const response = await fetch(`/api/products/${item.id}`);
+    if (!response.ok) {
+      throw new Error('Không thể lấy thông tin sản phẩm');
+    }
+    
+    const data = await response.json();
+    if (!data) {
+      console.error('Product not found:', item.id);
+      return {
+        id: item.id,
+        title: 'Sản phẩm không tồn tại',
+        price: 0,
+        soluong: item.soluong || 0,
+        note: item.note || 'Không có ghi chú'
+      };
+    }
+    
+    return {
+      ...data,
+      soluong: item.soluong || 0,
+      note: item.note || 'Không có ghi chú'
+    };
+  } catch (error) {
+    console.error('Error in getProduct:', error);
+    return {
+      id: item.id,
+      title: 'Lỗi tải sản phẩm',
+      price: 0,
+      soluong: item.soluong || 0,
+      note: item.note || 'Không có ghi chú'
+    };
+  }
 }
 
 window.onload = updateAmount();
@@ -669,10 +759,14 @@ function logOut() {
 
 function checkAdmin() {
   let user = JSON.parse(localStorage.getItem("currentuser"));
-  if (user && user.userType == 1) {
-    let node = document.createElement(`li`);
-    node.innerHTML = `<a href="./admin.html"><i class="fa-light fa-gear"></i> Quản lý cửa hàng</a>`;
-    document.querySelector(".header-middle-right-menu").prepend(node);
+  if (user && user.user_type == 1) {
+    // Kiểm tra xem menu đã tồn tại chưa
+    let existingMenu = document.querySelector(".header-middle-right-menu li a[href='./admin.html']");
+    if (!existingMenu) {
+      let node = document.createElement(`li`);
+      node.innerHTML = `<a href="./admin.html"><i class="fa-light fa-store"></i> Quản lý cửa hàng</a>`;
+      document.querySelector(".header-middle-right-menu").prepend(node);
+    }
   }
 }
 
@@ -847,64 +941,6 @@ function getProductInfo(id) {
   let products = JSON.parse(localStorage.getItem("products"));
   return products.find((item) => {
     return item.id == id;
-  });
-}
-
-function showCart() {
-  if (localStorage.getItem("currentuser") != null) {
-    let currentuser = JSON.parse(localStorage.getItem("currentuser"));
-    if (currentuser.cart.length != 0) {
-      document.querySelector(".gio-hang-trong").style.display = "none";
-      document.querySelector("button.thanh-toan").classList.remove("disabled");
-      let productcarthtml = "";
-      currentuser.cart.forEach((item) => {
-        let product = getProduct(item);
-        // Đảm bảo dữ liệu được xử lý đúng trước khi thêm vào HTML
-        const title = product.title || "Sản phẩm không có tên";
-        const price = vnd(parseInt(product.price)) || "0 đ";
-        const note = product.note || "Không có ghi chú";
-        const img = product.img || "./assets/img/default-product.jpg"; // Fallback nếu không có ảnh
-
-        productcarthtml += `
-          <li class="cart-item" data-id="${product.id}">
-            <div class="cart-item-info">
-              <img src="${img}" alt="${title}" class="cart-item-img">
-              <div class="cart-item-details">
-                <p class="cart-item-title">${title}</p>
-                <span class="cart-item-price price" data-price="${product.price}">
-                  ${price}
-                </span>
-              </div>
-            </div>
-            <p class="product-note"><i class="fa-light fa-pencil"></i><span>${note}</span></p>
-            <div class="cart-item-control">
-              <button class="cart-item-delete" onclick="deleteCartItem(${product.id}, this)">Xóa</button>
-              <div class="buttons_added">
-                <input class="minus is-form" type="button" value="-" onclick="decreasingNumber(this)">
-                <input class="input-qty" max="100" min="1" name="" type="number" value="${product.soluong}">
-                <input class="plus is-form" type="button" value="+" onclick="increasingNumber(this)">
-              </div>
-            </div>
-          </li>`;
-      });
-      document.querySelector(".cart-list").innerHTML = productcarthtml;
-      updateCartTotal();
-      saveAmountCart();
-    } else {
-      document.querySelector(".gio-hang-trong").style.display = "flex";
-    }
-  }
-  let modalCart = document.querySelector(".modal-cart");
-  let containerCart = document.querySelector(".cart-container");
-  let themmon = document.querySelector(".them-mon");
-  modalCart.onclick = function () {
-    closeCart();
-  };
-  themmon.onclick = function () {
-    closeCart();
-  };
-  containerCart.addEventListener("click", (e) => {
-    e.stopPropagation();
   });
 }
 
@@ -1084,14 +1120,14 @@ function renderProducts(showProduct) {
             productHtml += `<div class="col-product">
                 <article class="card-product" >
                     <div class="card-header">
-                        <a href="#" class="card-image-link" onclick="detailProduct(${product.id})">
+                        <a href="#" class="card-image-link" onclick="event.preventDefault(); detailProduct(${product.id}, event)">
                         <img class="card-image" src="${product.img}" alt="${product.title}">
                         </a>
                     </div>
                     <div class="food-info">
                         <div class="card-content">
                             <div class="card-title">
-                                <a href="#" class="card-title-link" onclick="detailProduct(${product.id})">${product.title}</a>
+                                <a href="#" class="card-title-link" onclick="event.preventDefault(); detailProduct(${product.id}, event)">${product.title}</a>
                             </div>
                         </div>
                         <div class="card-footer">
@@ -1099,7 +1135,7 @@ function renderProducts(showProduct) {
                                 <span class="current-price">${vnd(product.price)}</span>
                             </div>
                         <div class="product-buy">
-                            <button onclick="detailProduct(${product.id})" class="card-button order-item"><i class="fa-regular fa-cart-shopping-fast"></i> Đặt món</button>
+                            <button onclick="event.preventDefault(); detailProduct(${product.id}, event)" class="card-button order-item"><i class="fa-regular fa-cart-shopping-fast"></i> Đặt món</button>
                         </div> 
                     </div>
                     </div>
@@ -1119,7 +1155,7 @@ window.onload = function() {
         .then(response => response.json())
         .then(products => {
             productAll = products.filter(item => item.status == 1);
-            showHomeProduct(products);
+            showHomeProduct(productAll);
         })
         .catch(error => console.error('Lỗi khi lấy dữ liệu:', error));
 };
@@ -1136,14 +1172,17 @@ function searchProducts(mode) {
         return;
     }
 
+    // Lọc theo danh mục
     let result = valueCategory == "Tất cả" 
         ? productAll 
-        : productAll.filter(item => item.category == valueCategory);
+        : productAll.filter(item => item.category_name == valueCategory);
 
+    // Lọc theo từ khóa tìm kiếm
     result = valeSearchInput == "" 
         ? result 
         : result.filter(item => item.title.toString().toUpperCase().includes(valeSearchInput.toString().toUpperCase()));
 
+    // Lọc theo giá
     if (minPrice == "" && maxPrice != "") {
         result = result.filter(item => item.price <= maxPrice);
     } else if (minPrice != "" && maxPrice == "") {
@@ -1151,8 +1190,6 @@ function searchProducts(mode) {
     } else if (minPrice != "" && maxPrice != "") {
         result = result.filter(item => item.price <= maxPrice && item.price >= minPrice);
     }
-
-    document.getElementById("home-service").scrollIntoView();
 
     switch (mode) {
         case 0:
@@ -1195,34 +1232,263 @@ function displayList(productAll, perPage, currentPage) {
 }
 
 function showHomeProduct(products) {
-    let productAll = products.filter((item) => item.status == 1);
-    displayList(productAll, perPage, currentPage);
-    setupPagination(productAll, perPage, currentPage);
+    // Lấy danh sách danh mục duy nhất từ sản phẩm
+    const categories = [...new Set(products.map(p => p.category_name))].filter(Boolean);
+    
+    // Cập nhật select danh mục
+    const categorySelect = document.getElementById("advanced-search-category-select");
+    categorySelect.innerHTML = '<option value="Tất cả">Tất cả</option>';
+    categories.forEach(category => {
+        categorySelect.innerHTML += `<option value="${category}">${category}</option>`;
+    });
+    
+    // Hiển thị sản phẩm PHÂN TRANG
+    currentPage = 1; // Luôn về trang 1 khi load mới
+    displayList(products, perPage, currentPage);
+    setupPagination(products, perPage);
 }
 
 function setupPagination(productAll, perPage) {
-    document.querySelector(".page-nav-list").innerHTML = "";
+    const pageNavList = document.querySelector(".page-nav-list");
+    pageNavList.innerHTML = "";
+
     let page_count = Math.ceil(productAll.length / perPage);
-    for (let i = 1; i <= page_count; i++) {
-        let li = paginationChange(i, productAll, currentPage);
-        document.querySelector(".page-nav-list").appendChild(li);
+    if (page_count <= 1) return; // Không cần phân trang nếu chỉ có 1 trang
+
+    // Nút "Trang trước"
+    let prevLi = document.createElement("li");
+    prevLi.className = "page-nav-item prev";
+    prevLi.innerHTML = `<a href="javascript:;">&laquo;</a>`;
+    prevLi.onclick = function () {
+        if (currentPage > 1) {
+            currentPage--;
+            displayList(productAll, perPage, currentPage);
+            setupPagination(productAll, perPage);
+            scrollToProducts();
+        }
+    };
+    pageNavList.appendChild(prevLi);
+
+    // Hiển thị tối đa 5 số trang quanh trang hiện tại
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(page_count, currentPage + 2);
+
+    if (startPage > 1) {
+        let firstLi = document.createElement("li");
+        firstLi.className = "page-nav-item";
+        firstLi.innerHTML = `<a href="javascript:;">1</a>`;
+        firstLi.onclick = function () {
+            currentPage = 1;
+            displayList(productAll, perPage, currentPage);
+            setupPagination(productAll, perPage);
+            scrollToProducts();
+        };
+        pageNavList.appendChild(firstLi);
+
+        if (startPage > 2) {
+            let dots = document.createElement("li");
+            dots.className = "page-nav-item dots";
+            dots.innerHTML = `<span>...</span>`;
+            pageNavList.appendChild(dots);
+        }
     }
+
+    for (let i = startPage; i <= endPage; i++) {
+        let li = document.createElement("li");
+        li.className = "page-nav-item";
+        if (currentPage == i) li.classList.add("active");
+        li.innerHTML = `<a href="javascript:;">${i}</a>`;
+        li.onclick = function () {
+            currentPage = i;
+            displayList(productAll, perPage, currentPage);
+            setupPagination(productAll, perPage);
+            scrollToProducts();
+        };
+        pageNavList.appendChild(li);
+    }
+
+    if (endPage < page_count) {
+        if (endPage < page_count - 1) {
+            let dots = document.createElement("li");
+            dots.className = "page-nav-item dots";
+            dots.innerHTML = `<span>...</span>`;
+            pageNavList.appendChild(dots);
+        }
+        let lastLi = document.createElement("li");
+        lastLi.className = "page-nav-item";
+        lastLi.innerHTML = `<a href="javascript:;">${page_count}</a>`;
+        lastLi.onclick = function () {
+            currentPage = page_count;
+            displayList(productAll, perPage, currentPage);
+            setupPagination(productAll, perPage);
+            scrollToProducts();
+        };
+        pageNavList.appendChild(lastLi);
+    }
+
+    // Nút "Trang sau"
+    let nextLi = document.createElement("li");
+    nextLi.className = "page-nav-item next";
+    nextLi.innerHTML = `<a href="javascript:;">&raquo;</a>`;
+    nextLi.onclick = function () {
+        if (currentPage < page_count) {
+            currentPage++;
+            displayList(productAll, perPage, currentPage);
+            setupPagination(productAll, perPage);
+            scrollToProducts();
+        }
+    };
+    pageNavList.appendChild(nextLi);
 }
 
-function paginationChange(page, productAll, currentPage) {
-    let node = document.createElement(`li`);
-    node.classList.add("page-nav-item");
-    node.innerHTML = `<a href="javascript:;">${page}</a>`;
-    if (currentPage == page) node.classList.add("active");
-    node.addEventListener("click", function () {
-        currentPage = page;
-        displayList(productAll, perPage, currentPage);
-        let t = document.querySelectorAll(".page-nav-item.active");
-        for (let i = 0; i < t.length; i++) {
-            t[i].classList.remove("active");
-        }
-        node.classList.add("active");
-        document.getElementById("home-service").scrollIntoView();
+// Cuộn lên đầu danh sách sản phẩm khi đổi trang
+function scrollToProducts() {
+    document.getElementById("home-products").scrollIntoView({ behavior: "smooth" });
+}
+
+// Đặt hàng ngay
+function dathangngay() {
+    let currentUser = JSON.parse(localStorage.getItem("currentuser"));
+    if (!currentUser) {
+        toast({
+            title: "Warning",
+            message: "Vui lòng đăng nhập để đặt hàng!",
+            type: "warning",
+            duration: 3000,
+        });
+        return;
+    }
+
+    let soluong = document.querySelector(".input-qty").value;
+    let popupDetailNote = document.querySelector("#popup-detail-note").value;
+    let note = popupDetailNote == "" ? "Không có ghi chú" : popupDetailNote;
+    let productId = document.querySelector(".button-dathangngay").getAttribute("data-product");
+    let price = document.querySelector(".price").textContent.replace(/[^0-9]/g, "");
+
+    // Tạo đơn hàng mới
+    let order = {
+        id: createId(JSON.parse(localStorage.getItem("order") || "[]")),
+        khachhang: currentUser.phone,
+        tongtien: parseInt(price) * parseInt(soluong),
+        trangthai: 0,
+        thoigiandat: new Date().toISOString(),
+        hinhthucgiao: "Giao hàng tận nơi",
+        thoigiangiao: "",
+        ngaygiaohang: new Date().toISOString(),
+        diachinhan: currentUser.address || "",
+        tenguoinhan: currentUser.fullname,
+        sdtnhan: currentUser.phone
+    };
+
+    // Lưu đơn hàng
+    let orders = JSON.parse(localStorage.getItem("order") || "[]");
+    orders.push(order);
+    localStorage.setItem("order", JSON.stringify(orders));
+
+    // Lưu chi tiết đơn hàng
+    let orderDetails = JSON.parse(localStorage.getItem("orderDetails") || "[]");
+    orderDetails.push({
+        madon: order.id,
+        id: productId,
+        soluong: parseInt(soluong),
+        price: parseInt(price),
+        note: note
     });
-    return node;
+    localStorage.setItem("orderDetails", JSON.stringify(orderDetails));
+
+    // Xóa sản phẩm khỏi giỏ hàng nếu có
+    if (currentUser.cart) {
+        currentUser.cart = currentUser.cart.filter(item => item.id != productId);
+        localStorage.setItem("currentuser", JSON.stringify(currentUser));
+    }
+
+    toast({
+        title: "Success",
+        message: "Đặt hàng thành công!",
+        type: "success",
+        duration: 3000,
+    });
+
+    closeModal();
+    updateAmount();
+}
+
+// Forgot Password Functions
+function openForgotPassword() {
+    document.querySelector(".modal.forgot-password").classList.add("open");
+    document.body.style.overflow = "hidden";
+}
+
+function closeForgotPassword() {
+    document.querySelector(".modal.forgot-password").classList.remove("open");
+    document.body.style.overflow = "auto";
+}
+
+// Handle forgot password form submission
+const forgotPasswordBtn = document.getElementById("forgot-password-button");
+if (forgotPasswordBtn) {
+    forgotPasswordBtn.addEventListener("click", async function(e) {
+        e.preventDefault();
+        const phone = document.getElementById("phone-forgot").value;
+        const messageElement = document.querySelector(".form-message-phone-forgot");
+        
+        // Validate phone number
+        if (!phone) {
+            messageElement.textContent = "Vui lòng nhập số điện thoại";
+            return;
+        }
+        
+        if (phone.length != 10) {
+            messageElement.textContent = "Vui lòng nhập số điện thoại 10 số";
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/auth/forgot-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ phone })
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || 'Lỗi khi đặt lại mật khẩu');
+            }
+            
+            // Show success message
+            toast({
+                title: "Thành công",
+                message: "Mật khẩu mới đã được gửi đến số điện thoại của bạn",
+                type: "success",
+                duration: 3000,
+            });
+            
+            // Close modal
+            closeForgotPassword();
+            
+        } catch (error) {
+            console.error('Lỗi:', error);
+            messageElement.textContent = error.message;
+        }
+    });
+}
+
+// Hiển thị sản phẩm theo danh mục
+async function showCategory(category) {
+    try {
+        // Gọi API lấy sản phẩm theo danh mục
+        const res = await fetch(`/api/admin/products?category=${encodeURIComponent(category)}`);
+        const data = await res.json();
+        if (res.ok) {
+            // Hiển thị danh sách sản phẩm ra trang chủ
+            showHomeProduct(data.products); // Hàm này sẽ render sản phẩm ra #home-products
+        } else {
+            showToast(data.error || 'Không lấy được danh sách món ăn!');
+        }
+    } catch (err) {
+        showToast('Lỗi kết nối server!');
+    }
 }

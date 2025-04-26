@@ -100,4 +100,42 @@ router.post('/login', (req, res) => {
     });
 });
 
+// Quên mật khẩu
+router.post('/forgot-password', (req, res) => {
+    const { phone } = req.body;
+    
+    // Kiểm tra xem số điện thoại có tồn tại không
+    const query = 'SELECT * FROM users WHERE phone = ?';
+    connection.query(query, [phone], (err, results) => {
+        if (err) {
+            console.error('Lỗi kiểm tra user:', err);
+            res.status(500).json({ error: 'Lỗi kiểm tra user' });
+            return;
+        }
+        
+        if (results.length === 0) {
+            res.status(404).json({ error: 'Số điện thoại chưa được đăng ký' });
+            return;
+        }
+        
+        // Tạo mật khẩu mới ngẫu nhiên
+        const tempPassword = Math.random().toString(36).slice(-8);
+        
+        // Cập nhật mật khẩu mới vào database
+        const updateQuery = 'UPDATE users SET password = ? WHERE phone = ?';
+        connection.query(updateQuery, [tempPassword, phone], (err, result) => {
+            if (err) {
+                console.error('Lỗi cập nhật mật khẩu:', err);
+                res.status(500).json({ error: 'Lỗi cập nhật mật khẩu' });
+                return;
+            }
+            
+            res.json({ 
+                message: 'Mật khẩu mới đã được gửi đến số điện thoại của bạn',
+                tempPassword: tempPassword // Trong thực tế, bạn nên gửi SMS hoặc email thay vì trả về mật khẩu
+            });
+        });
+    });
+});
+
 module.exports = router; 

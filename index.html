@@ -503,6 +503,7 @@
                   class="form-control"
                 />
                 <span class="form-message-check-login form-message"></span>
+                <a href="javascript:;" onclick="openForgotPassword()" class="forgot-password-link">Quên mật khẩu?</a>
               </div>
               <button class="form-submit" id="login-button">Đăng nhập</button>
             </form>
@@ -553,6 +554,39 @@
         </button>
         <div class="detail-order-content"></div>
       </div>
+    </div>
+    <div class="modal forgot-password">
+        <div class="modal-container">
+            <button class="form-close" onclick="closeForgotPassword()">
+                <i class="fa-regular fa-xmark"></i>
+            </button>
+            <div class="forms mdl-cnt">
+                <div class="form-content forgot-password">
+                    <h3 class="form-title">Quên mật khẩu</h3>
+                    <p class="form-description">
+                        Vui lòng nhập số điện thoại đã đăng ký để lấy lại mật khẩu
+                    </p>
+                    <form action="" class="forgot-password-form">
+                        <div class="form-group">
+                            <label for="phone-forgot" class="form-label">Số điện thoại</label>
+                            <input
+                                id="phone-forgot"
+                                name="phone"
+                                type="text"
+                                placeholder="Nhập số điện thoại"
+                                class="form-control"
+                            />
+                            <span class="form-message-phone-forgot form-message"></span>
+                        </div>
+                        <button class="form-submit" id="forgot-password-button">Gửi yêu cầu</button>
+                    </form>
+                    <p class="change-login">
+                        Bạn đã nhớ mật khẩu?
+                        <a href="javascript:;" class="login-link" onclick="closeForgotPassword(); openLogin()">Đăng nhập ngay</a>
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
     <footer class="footer">
       <div class="container">
@@ -914,7 +948,7 @@
           <div class="bill-payment">
             <div class="total-bill-order"></div>
             <div class="policy-note">
-              Bằng việc bấm vào nút “Đặt hàng”, tôi đồng ý với
+              Bằng việc bấm vào nút "Đặt hàng", tôi đồng ý với
               <a href="#" target="_blank">chính sách hoạt động</a>
               của chúng tôi.
             </div>
