@@ -7,8 +7,8 @@
     <link href='./assets/img/favicon.png' rel='icon' type='image/x-icon' />
     <link rel="stylesheet" href="assets/css/admin.css">
     <link rel="stylesheet" href="./assets/css/toast-message.css">
-    <link href="./assets/font/font-awesome-pro-v6-6.2.0/css/all.min.css" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="./assets/css/admin-responsive.css">
+    <link href="./assets/font/font-awesome-pro-v6-6.2.0/css/all.min.css" rel="stylesheet" type="text/css" />
     <title>Quản lý cửa hàng</title>
 </head>
 
@@ -132,9 +132,9 @@
                     <div class="admin-control-left">
                         <select name="the-loai" id="the-loai" onchange="showProduct()">
                             <option>Tất cả</option>
-                            <option>Món mặn</option>
+                            <option>Món mặn</option>
                             <option>Món chay</option>
-                            <option>Món lẩu</option>
+                            <option>Món lẩu</option>
                             <option>Món ăn vặt</option>
                             <option>Món tráng miệng</option>
                             <option>Nước uống</option>
@@ -284,9 +284,9 @@
                                 <input type="date" class="form-control-date" id="time-end-tk" onchange="thongKe()">
                             </div>
                         </form> 
-                        <button class="btn-reset-order" onclick="thongKe(1)"><i class="fa-regular fa-arrow-up-short-wide"></i></i></button>
-                        <button class="btn-reset-order" onclick="thongKe(2)"><i class="fa-regular fa-arrow-down-wide-short"></i></button>
-                        <button class="btn-reset-order" onclick="thongKe(0)"><i class="fa-light fa-arrow-rotate-right"></i></button>                    
+                        <button class="btn-reset-order" onclick="loadProductStatistics('asc')"><i class="fa-regular fa-arrow-up-short-wide"></i></button>
+                        <button class="btn-reset-order" onclick="loadProductStatistics('desc')"><i class="fa-regular fa-arrow-down-wide-short"></i></button>
+                        <button class="btn-reset-order" onclick="loadProductStatistics()"><i class="fa-light fa-arrow-rotate-right"></i></button>                    
                     </div>
                 </div>
                 <div class="order-statistical" id="order-statistical">
@@ -360,7 +360,7 @@
                         <div class="form-group">
                             <label for="category" class="form-label">Chọn món</label>
                             <select name="category" id="chon-mon">
-                                <option>Món mặn</option>
+                                <option>Món mặn</option>
                                 <option>Món chay</option>
                                 <option>Món lẩu</option>
                                 <option>Món ăn vặt</option>

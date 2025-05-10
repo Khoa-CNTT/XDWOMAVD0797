@@ -1,7 +1,7 @@
 {
-  "name": "hungryhub-api",
+  "name": "chatbot-api",
   "version": "1.0.0",
-  "description": "API for HungryHub",
+  "description": "Chatbot API for HungryHub",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
@@ -11,11 +11,20 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.18.2",
-    "mysql2": "^3.6.0",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^4.17.1",
+    "mysql2": "^2.3.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
-  }
+    "nodemon": "^2.0.22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Khoa-CNTT/XDWOMAVD0797.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Khoa-CNTT/XDWOMAVD0797/issues"
+  },
+  "homepage": "https://github.com/Khoa-CNTT/XDWOMAVD0797#readme"
 }

@@ -1327,7 +1327,7 @@ label a {
   right: 0;
   left: 0;
   bottom: 0;
-  z-index: 16;
+  z-index: 100 !important;
   display: flex;
   align-items: center;
   flex-direction: row;
@@ -1360,6 +1360,7 @@ label a {
   visibility: hidden;
   transition: transform 0.5s cubic-bezier(0.645, 0.045, 0.355, 1),
     visibility 0.5s cubic-bezier(0.645, 0.045, 0.355, 1);
+  z-index: 101 !important;
 }
 
 .cart-header {
@@ -2475,4 +2476,16 @@ input[type="number"] {
   /* text-align: right; */
   min-width: 80px;
   right: auto;
+}
+
+.chat-widget {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 350px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.2);
+  z-index: 10 !important;
+  font-family: Arial, sans-serif;
 }

@@ -1,8 +1,12 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const productsRouter = require('./api/products');
 const adminRouter = require('./api/admin');
 const authRouter = require('./api/auth');
+const paymentRoutes = require('./api/payment');
+const ordersRouter = require('./api/orders');
+const chatbotRouter = require('./api/chatbot');
 const path = require('path');
 
 const app = express();
@@ -16,6 +20,9 @@ app.use(express.static(__dirname));
 app.use('/api/products', productsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/payment', paymentRoutes);
+app.use('/api/orders', ordersRouter);
+app.use('/api/chatbot', chatbotRouter);
 
 // Route cho trang chủ
 app.get('/', (req, res) => {

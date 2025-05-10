@@ -62,9 +62,9 @@ router.get('/search', (req, res) => {
 
 // Thêm sản phẩm mới
 router.post('/', (req, res) => {
-    const { name, price, description, image, category } = req.body;
-    const query = 'INSERT INTO products (name, price, description, image, category) VALUES (?, ?, ?, ?, ?)';
-    connection.query(query, [name, price, description, image, category], (err, result) => {
+    const { title, price, description, img, category_id } = req.body;
+    const query = 'INSERT INTO products (name, price, description, img, category_id) VALUES (?, ?, ?, ?, ?)';
+    connection.query(query, [title, price, description, img, category_id], (err, result) => {
         if (err) {
             console.error('Lỗi khi thêm sản phẩm:', err);
             res.status(500).json({ error: 'Lỗi khi thêm sản phẩm' });
@@ -77,9 +77,9 @@ router.post('/', (req, res) => {
 // Cập nhật sản phẩm
 router.put('/:id', (req, res) => {
     const id = req.params.id;
-    const { name, price, description, image, category } = req.body;
-    const query = 'UPDATE products SET name = ?, price = ?, description = ?, image = ?, category = ? WHERE id = ?';
-    connection.query(query, [name, price, description, image, category, id], (err, result) => {
+    const { title, price, description, img, category_id } = req.body;
+    const query = 'UPDATE products SET title = ?, price = ?, description = ?, img = ?, category_id = ? WHERE id = ?';
+    connection.query(query, [title, price, description, img, category_id, id], (err, result) => {
         if (err) {
             console.error('Lỗi khi cập nhật sản phẩm:', err);
             res.status(500).json({ error: 'Lỗi khi cập nhật sản phẩm' });

@@ -1,6 +1,6 @@
 // Doi sang dinh dang tien VND
 function vnd(price) {
-  return price.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
+  return parseInt(price).toLocaleString("vi-VN") + " đ";
 }
 
 // Close popup
@@ -8,6 +8,7 @@ const body = document.querySelector("body");
 let modalContainer = document.querySelectorAll(".modal");
 let modalBox = document.querySelectorAll(".mdl-cnt");
 let formLogSign = document.querySelector(".forms");
+let checkoutpage = document.querySelector(".checkout-page");
 
 // Click vùng ngoài sẽ tắt Popup
 modalContainer.forEach((item) => {
@@ -103,7 +104,7 @@ async function detailProduct(index, event) {
     console.error("Product detail modal not found");
     return;
   }
-  
+
   try {
     // Gọi API để lấy thông tin sản phẩm
     console.log('Calling API for product ID:', index);
@@ -206,7 +207,33 @@ async function detailProduct(index, event) {
     });
 
     // Buy product immediately
-    // dathangngay();
+    let dathangngayBtn = document.querySelector(".button-dathangngay");
+    dathangngayBtn.addEventListener("click", () => {
+      if (localStorage.getItem("currentuser")) {
+        let soluong = document.querySelector(".input-qty").value;
+        let popupDetailNote = document.querySelector("#popup-detail-note").value;
+        let note = popupDetailNote == "" ? "Không có ghi chú" : popupDetailNote;
+        let product = {
+          id: infoProduct.id,
+          title: infoProduct.title,
+          price: infoProduct.price,
+          soluong: parseInt(soluong),
+          note: note
+        };
+        checkoutpage.classList.add('active');
+        thanhtoanpage(2, product);
+        closeModal();
+        body.style.overflow = "hidden";
+      } else {
+        toast({
+          title: "Warning",
+          message: "Chưa đăng nhập tài khoản !",
+          type: "warning",
+          duration: 3000,
+        });
+      }
+    });
+
   } catch (error) {
     console.error('Error in detailProduct:', error);
     toast({
@@ -258,9 +285,10 @@ async function showCart() {
     let currentuser = JSON.parse(localStorage.getItem("currentuser"));
     if (currentuser.cart.length != 0) {
       document.querySelector(".gio-hang-trong").style.display = "none";
-      document.querySelector("button.thanh-toan").classList.remove("disabled");
+      let nutthanhtoan = document.querySelector('.thanh-toan');
+      nutthanhtoan.classList.remove("disabled");
+      nutthanhtoan.removeAttribute("disabled");
       let productcarthtml = "";
-      
       // Sử dụng Promise.all để đợi tất cả các sản phẩm được tải
       const products = await Promise.all(currentuser.cart.map(async (item) => {
         const product = await getProduct(item);
@@ -270,35 +298,36 @@ async function showCart() {
           note: item.note
         };
       }));
-      
       products.forEach((product) => {
         productcarthtml += `<li class="cart-item" data-id="${product.id}">
-          <div class="cart-item-info">
+                <div class="cart-item-info">
             <img src="${product.img}" alt="${product.title}" class="cart-item-img">
             <div class="cart-item-details">
               <p class="cart-item-title">${product.title}</p>
               <span class="cart-item-price price" data-price="${product.price}">
-                ${vnd(parseInt(product.price))}
-              </span>
-            </div>
+                    ${vnd(parseInt(product.price))}
+                    </span>
+                </div>
           </div>
           <p class="product-note"><i class="fa-light fa-pencil"></i><span>${product.note}</span></p>
-          <div class="cart-item-control">
+                <div class="cart-item-control">
             <button class="cart-item-delete" onclick="deleteCartItem(${product.id},this)">Xóa</button>
-            <div class="buttons_added">
-              <input class="minus is-form" type="button" value="-" onclick="decreasingNumber(this)">
+                    <div class="buttons_added">
+                        <input class="minus is-form" type="button" value="-" onclick="decreasingNumber(this)">
               <input class="input-qty" max="100" min="1" name="" type="number" value="${product.soluong}">
-              <input class="plus is-form" type="button" value="+" onclick="increasingNumber(this)">
-            </div>
-          </div>
-        </li>`;
+                        <input class="plus is-form" type="button" value="+" onclick="increasingNumber(this)">
+                    </div>
+                </div>
+            </li>`;
       });
-      
       document.querySelector(".cart-list").innerHTML = productcarthtml;
       updateCartTotal();
       saveAmountCart();
     } else {
       document.querySelector(".gio-hang-trong").style.display = "flex";
+      let nutthanhtoan = document.querySelector('.thanh-toan');
+      nutthanhtoan.classList.add("disabled");
+      nutthanhtoan.setAttribute("disabled", true);
     }
   }
   let modalCart = document.querySelector(".modal-cart");
@@ -313,6 +342,17 @@ async function showCart() {
   containerCart.addEventListener("click", (e) => {
     e.stopPropagation();
   });
+  // Gán lại sự kiện cho nút thanh toán
+  let nutthanhtoan = document.querySelector('.thanh-toan');
+  let checkoutpage = document.querySelector('.checkout-page');
+  nutthanhtoan.onclick = function() {
+    if (!nutthanhtoan.classList.contains('disabled')) {
+      checkoutpage.classList.add('active');
+      thanhtoanpage(1);
+      closeCart();
+      body.style.overflow = "hidden";
+    }
+  }
 }
 
 // Delete cart item
@@ -326,7 +366,9 @@ function deleteCartItem(id, el) {
   // Nếu trống thì hiển thị giỏ hàng trống
   if (currentUser.cart.length == 0) {
     document.querySelector(".gio-hang-trong").style.display = "flex";
-    document.querySelector("button.thanh-toan").classList.add("disabled");
+    let nutthanhtoan = document.querySelector('.thanh-toan');
+    nutthanhtoan.classList.add("disabled");
+    nutthanhtoan.setAttribute("disabled", true);
   }
   localStorage.setItem("currentuser", JSON.stringify(currentUser));
   updateCartTotal();
@@ -444,6 +486,12 @@ function openCart() {
   showCart();
   document.querySelector(".modal-cart").classList.add("open");
   body.style.overflow = "hidden";
+  // Ẩn chatbot khi mở giỏ hàng
+  var chatContainer = document.getElementById('chat-container');
+  if (chatContainer) {
+    chatContainer.style.display = 'none';
+    isChatOpen = false;
+  }
 }
 
 function closeCart() {
@@ -776,18 +824,69 @@ window.onload = checkAdmin();
 // Chuyển đổi trang chủ và trang thông tin tài khoản
 function myAccount() {
   window.scrollTo({ top: 0, behavior: "smooth" });
-  document.getElementById("trangchu").classList.add("hide");
-  document.getElementById("order-history").classList.remove("open");
-  document.getElementById("account-user").classList.add("open");
+  // Ẩn các phần không liên quan
+  var hideSelectors = [
+    '.home-slider',
+    '.home-service',
+    '.home-title-block',
+    '.home-products',
+    '.page-nav',
+    '#trangchu',
+    '#order-history' // Ẩn luôn phần đơn hàng
+  ];
+  hideSelectors.forEach(function(sel) {
+    var el = document.querySelector(sel);
+    if (el) el.style.display = 'none';
+  });
+  // Hiện form tài khoản
+  var acc = document.getElementById("account-user");
+  if (acc) {
+    acc.classList.add("open");
+    acc.style.display = "flex";
+  }
+  // Ẩn phần đơn hàng nếu có
+  var order = document.getElementById("order-history");
+  if (order) {
+    order.classList.remove("open");
+    order.style.display = "none";
+  }
+  // Hiện lại các trường tài khoản
+  var changePass = document.querySelector('.change-password');
+  if (changePass) changePass.style.display = '';
+  var btnSavePass = document.getElementById('save-password');
+  if (btnSavePass) btnSavePass.style.display = '';
   userInfo();
 }
 
-// Chuyển đổi trang chủ và trang xem lịch sử đặt hàng
 function orderHistory() {
   window.scrollTo({ top: 0, behavior: "smooth" });
-  document.getElementById("account-user").classList.remove("open");
-  document.getElementById("trangchu").classList.add("hide");
-  document.getElementById("order-history").classList.add("open");
+  // Ẩn các phần không liên quan
+  var hideSelectors = [
+    '.home-slider',
+    '.home-service',
+    '.home-title-block',
+    '.home-products',
+    '.page-nav',
+    '#trangchu',
+    '#account-user' // Ẩn luôn phần tài khoản
+  ];
+  hideSelectors.forEach(function(sel) {
+    var el = document.querySelector(sel);
+    if (el) el.style.display = 'none';
+  });
+  // Hiện phần đơn hàng
+  var order = document.getElementById("order-history");
+  if (order) {
+    order.classList.add("open");
+    order.style.display = "flex";
+    order.style.justifyContent = "center";
+  }
+  // Ẩn phần tài khoản nếu có
+  var acc = document.getElementById("account-user");
+  if (acc) {
+    acc.classList.remove("open");
+    acc.style.display = "none";
+  }
   renderOrderProduct();
 }
 
@@ -810,42 +909,54 @@ function userInfo() {
 }
 
 // Thay doi thong tin
-function changeInformation() {
-  let accounts = JSON.parse(localStorage.getItem("accounts"));
+async function changeInformation() {
   let user = JSON.parse(localStorage.getItem("currentuser"));
-  let infoname = document.getElementById("infoname");
-  let infoemail = document.getElementById("infoemail");
-  let infoaddress = document.getElementById("infoaddress");
+  let infoname = document.getElementById("infoname").value;
+  let infoemail = document.getElementById("infoemail").value;
+  let infoaddress = document.getElementById("infoaddress").value;
 
-  user.fullname = infoname.value;
-  if (infoemail.value.length > 0) {
-    if (!emailIsValid(infoemail.value)) {
-      document.querySelector(".inforemail-error").innerHTML =
-        "Vui lòng nhập lại email!";
-      infoemail.value = "";
-    } else {
-      user.email = infoemail.value;
-    }
+  // Validate như cũ...
+  if (infoemail.length > 0 && !emailIsValid(infoemail)) {
+    document.querySelector(".inforemail-error").innerHTML = "Vui lòng nhập lại email!";
+    document.getElementById("infoemail").value = "";
+    return;
   }
 
-  if (infoaddress.value.length > 0) {
-    user.address = infoaddress.value;
+  try {
+    const response = await fetch('/api/auth/update-profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phone: user.phone,
+        fullname: infoname,
+        email: infoemail,
+        address: infoaddress
+      })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Lỗi cập nhật thông tin");
+
+    // Cập nhật lại localStorage nếu muốn đồng bộ giao diện
+    user.fullname = infoname;
+    user.email = infoemail;
+    user.address = infoaddress;
+    localStorage.setItem("currentuser", JSON.stringify(user));
+
+    toast({
+      title: "Success",
+      message: "Cập nhật thông tin thành công!",
+      type: "success",
+      duration: 3000,
+    });
+    kiemtradangnhap();
+  } catch (error) {
+    toast({
+      title: "Lỗi",
+      message: error.message,
+      type: "error",
+      duration: 3000,
+    });
   }
-
-  let vitri = accounts.findIndex((item) => item.phone == user.phone);
-
-  accounts[vitri].fullname = user.fullname;
-  accounts[vitri].email = user.email;
-  accounts[vitri].address = user.address;
-  localStorage.setItem("currentuser", JSON.stringify(user));
-  localStorage.setItem("accounts", JSON.stringify(accounts));
-  kiemtradangnhap();
-  toast({
-    title: "Success",
-    message: "Cập nhật thông tin thành công !",
-    type: "success",
-    duration: 3000,
-  });
 }
 
 // Đổi mật khẩu
@@ -945,65 +1056,58 @@ function getProductInfo(id) {
 }
 
 // Quan ly don hang
-function renderOrderProduct() {
+async function renderOrderProduct() {
   let currentUser = JSON.parse(localStorage.getItem("currentuser"));
-  let order = localStorage.getItem("order")
-    ? JSON.parse(localStorage.getItem("order"))
-    : [];
+  if (!currentUser) return;
   let orderHtml = "";
-  let arrDonHang = [];
-  for (let i = 0; i < order.length; i++) {
-    if (order[i].khachhang === currentUser.phone) {
-      arrDonHang.push(order[i]);
-    }
-  }
-  if (arrDonHang.length == 0) {
-    orderHtml = `<div class="empty-order-section"><img src="./assets/img/empty-order.jpg" alt="" class="empty-order-img"><p>Chưa có đơn hàng nào</p></div>`;
-  } else {
-    arrDonHang.forEach((item) => {
-      let productHtml = `<div class="order-history-group">`;
-      let chiTietDon = getOrderDetails(item.id);
-      chiTietDon.forEach((sp) => {
-        let infosp = getProductInfo(sp.id);
-        productHtml += `<div class="order-history">
+  // Lấy đơn hàng từ database qua API
+  try {
+    const response = await fetch(`/api/orders/user/${currentUser.id}`);
+    const orders = await response.json();
+    if (!orders.length) {
+      orderHtml = `<div class="empty-order-section"><img src="./assets/img/empty-order.jpg" alt="" class="empty-order-img"><p>Chưa có đơn hàng nào</p></div>`;
+    } else {
+      // Gom nhóm đơn hàng theo mã đơn (nếu API trả về dạng flat)
+      // Nếu API trả về mỗi đơn là 1 object có mảng chi tiết thì chỉ cần lặp
+      // Giả sử API trả về mỗi đơn có mảng order_details
+      orders.forEach((item) => {
+        let productHtml = `<div class="order-history-group">`;
+        // Nếu item.order_details là mảng chi tiết sản phẩm
+        (item.order_details || []).forEach((sp) => {
+          productHtml += `<div class="order-history">
                     <div class="order-history-left">
-                        <img src="${infosp.img}" alt="">
+                        <img src="${sp.img || './assets/img/no-image.png'}" alt="">
                         <div class="order-history-info">
-                            <h4>${infosp.title}!</h4>
-                            <p class="order-history-note"><i class="fa-light fa-pen"></i> ${
-                              sp.note
-                            }</p>
-                            <p class="order-history-quantity">x${sp.soluong}</p>
+                            <h4>${sp.title || 'Sản phẩm'}</h4>
+                            <p class="order-history-note"><i class="fa-light fa-pen"></i> ${sp.note || ''}</p>
+                            <p class="order-history-quantity">x${sp.quantity || sp.soluong || 0}</p>
                         </div>
                     </div>
                     <div class="order-history-right">
                         <div class="order-history-price">
-                            <span class="order-history-current-price">${vnd(
-                              sp.price
-                            )}</span>
+                            <span class="order-history-current-price">${vnd(sp.price || 0)}</span>
                         </div>                         
                     </div>
                 </div>`;
-      });
-      let textCompl = item.trangthai == 1 ? "Đã xử lý" : "Đang xử lý";
-      let classCompl = item.trangthai == 1 ? "complete" : "no-complete";
-      productHtml += `<div class="order-history-control">
+        });
+        let textCompl = item.status == 1 ? "Đã xử lý" : "Đang xử lý";
+        let classCompl = item.status == 1 ? "complete" : "no-complete";
+        productHtml += `<div class="order-history-control">
                 <div class="order-history-status">
                     <span class="order-history-status-sp ${classCompl}">${textCompl}</span>
-                    <button id="order-history-detail" onclick="detailOrder('${
-                      item.id
-                    }')"><i class="fa-regular fa-eye"></i> Xem chi tiết</button>
+                    <button id="order-history-detail" onclick="detailOrder('${item.id}')"><i class="fa-regular fa-eye"></i> Xem chi tiết</button>
                 </div>
                 <div class="order-history-total">
                     <span class="order-history-total-desc">Tổng tiền: </span>
-                    <span class="order-history-toltal-price">${vnd(
-                      item.tongtien
-                    )}</span>
+                    <span class="order-history-toltal-price">${vnd(item.total_amount || item.tongtien || 0)}</span>
                 </div>
             </div>`;
-      productHtml += `</div>`;
-      orderHtml += productHtml;
-    });
+        productHtml += `</div>`;
+        orderHtml += productHtml;
+      });
+    }
+  } catch (e) {
+    orderHtml = `<div class='empty-order-section'><p>Lỗi tải đơn hàng!</p></div>`;
   }
   document.querySelector(".order-history-section").innerHTML = orderHtml;
 }
@@ -1034,41 +1138,46 @@ function formatDate(date) {
 }
 
 // Xem chi tiet don hang
-function detailOrder(id) {
-  let order = JSON.parse(localStorage.getItem("order"));
-  let detail = order.find((item) => {
-    return item.id == id;
-  });
+async function detailOrder(id) {
+  let currentUser = JSON.parse(localStorage.getItem("currentuser"));
+  if (!currentUser) return;
+  // Lấy lại danh sách đơn hàng từ API
+  const response = await fetch(`/api/orders/user/${currentUser.id}`);
+  const orders = await response.json();
+  const detail = orders.find((item) => item.id == id);
+  if (!detail) {
+    alert("Không tìm thấy đơn hàng!");
+    return;
+  }
   document.querySelector(".modal.detail-order").classList.add("open");
   let detailOrderHtml = `<ul class="detail-order-group">
         <li class="detail-order-item">
             <span class="detail-order-item-left"><i class="fa-light fa-calendar-days"></i> Ngày đặt hàng</span>
-            <span class="detail-order-item-right">${formatDate(
-              detail.thoigiandat
-            )}</span>
+            <span class="detail-order-item-right">${formatDate(detail.created_at)}</span>
         </li>
         <li class="detail-order-item">
             <span class="detail-order-item-left"><i class="fa-light fa-truck"></i> Hình thức giao</span>
-            <span class="detail-order-item-right">${detail.hinhthucgiao}</span>
+            <span class="detail-order-item-right">${detail.delivery_type || ""}</span>
         </li>
         <li class="detail-order-item">
             <span class="detail-order-item-left"><i class="fa-light fa-clock"></i> Ngày nhận hàng</span>
-            <span class="detail-order-item-right">${
-              (detail.thoigiangiao == "" ? "" : detail.thoigiangiao + " - ") +
-              formatDate(detail.ngaygiaohang)
-            }</span>
+            <span class="detail-order-item-right">${formatDate(detail.delivery_date)}</span>
         </li>
         <li class="detail-order-item">
             <span class="detail-order-item-left"><i class="fa-light fa-location-dot"></i> Địa điểm nhận</span>
-            <span class="detail-order-item-right">${detail.diachinhan}</span>
+            <span class="detail-order-item-right">${detail.shipping_address || ""}</span>
         </li>
         <li class="detail-order-item">
             <span class="detail-order-item-left"><i class="fa-thin fa-person"></i> Người nhận</span>
-            <span class="detail-order-item-right">${detail.tenguoinhan}</span>
+            <span class="detail-order-item-right">${detail.receiver_name || ""}</span>
         </li>
         <li class="detail-order-item">
             <span class="detail-order-item-left"><i class="fa-light fa-phone"></i> Số điện thoại nhận</span>
-            <span class="detail-order-item-right">${detail.sdtnhan}</span>
+            <span class="detail-order-item-right">${detail.receiver_phone || ""}</span>
+        </li>
+        <li class="detail-order-item">
+            <span class="detail-order-item-left"><i class="fa-light fa-note-sticky"></i> Ghi chú</span>
+            <span class="detail-order-item-right">${detail.note || ""}</span>
         </li>
     </ul>`;
   document.querySelector(".detail-order-content").innerHTML = detailOrderHtml;
@@ -1300,7 +1409,7 @@ function setupPagination(productAll, perPage) {
         li.innerHTML = `<a href="javascript:;">${i}</a>`;
         li.onclick = function () {
             currentPage = i;
-            displayList(productAll, perPage, currentPage);
+        displayList(productAll, perPage, currentPage);
             setupPagination(productAll, perPage);
             scrollToProducts();
         };
@@ -1413,6 +1522,17 @@ function dathangngay() {
     updateAmount();
 }
 
+// Add event listener for "Đặt hàng ngay" button
+document.addEventListener('DOMContentLoaded', function() {
+    const dathangngayBtn = document.querySelector('.button-dathangngay');
+    if (dathangngayBtn) {
+        dathangngayBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            dathangngay();
+        });
+    }
+});
+
 // Forgot Password Functions
 function openForgotPassword() {
     document.querySelector(".modal.forgot-password").classList.add("open");
@@ -1491,4 +1611,213 @@ async function showCategory(category) {
     } catch (err) {
         showToast('Lỗi kết nối server!');
     }
+}
+
+// Hiển thị form đánh giá
+function showReviewForm(productId) {
+    const reviewForm = document.createElement('div');
+    reviewForm.className = 'review-form';
+    reviewForm.innerHTML = `
+        <h3>Đánh giá sản phẩm</h3>
+        <div class="rating">
+            <span class="star" data-rating="1">★</span>
+            <span class="star" data-rating="2">★</span>
+            <span class="star" data-rating="3">★</span>
+            <span class="star" data-rating="4">★</span>
+            <span class="star" data-rating="5">★</span>
+        </div>
+        <textarea id="reviewComment" placeholder="Nhập đánh giá của bạn..."></textarea>
+        <button onclick="submitReview(${productId})">Gửi đánh giá</button>
+    `;
+    
+    // Thêm sự kiện cho các ngôi sao
+    const stars = reviewForm.querySelectorAll('.star');
+    stars.forEach(star => {
+        star.addEventListener('click', function() {
+            const rating = this.dataset.rating;
+            stars.forEach(s => {
+                s.style.color = s.dataset.rating <= rating ? '#ffd700' : '#ccc';
+            });
+            reviewForm.dataset.rating = rating;
+        });
+    });
+    
+    return reviewForm;
+}
+
+// Gửi đánh giá
+async function submitReview(productId) {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) {
+        alert('Vui lòng đăng nhập để đánh giá');
+        return;
+    }
+    
+    const reviewForm = document.querySelector('.review-form');
+    const rating = reviewForm.dataset.rating;
+    const comment = document.getElementById('reviewComment').value;
+    
+    if (!rating) {
+        alert('Vui lòng chọn số sao');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/admin/reviews', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                user_id: user.id,
+                product_id: productId,
+                rating: parseInt(rating),
+                comment: comment
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert('Cảm ơn bạn đã đánh giá!');
+            loadProductReviews(productId);
+        } else {
+            alert(data.error || 'Có lỗi xảy ra khi gửi đánh giá');
+        }
+    } catch (error) {
+        console.error('Lỗi khi gửi đánh giá:', error);
+        alert('Có lỗi xảy ra khi gửi đánh giá');
+    }
+}
+
+// Tải danh sách đánh giá của sản phẩm
+async function loadProductReviews(productId) {
+    try {
+        const response = await fetch(`/api/admin/reviews?product_id=${productId}`);
+        const data = await response.json();
+        
+        const reviewsContainer = document.querySelector('.product-reviews');
+        if (!reviewsContainer) return;
+        
+        reviewsContainer.innerHTML = `
+            <h3>Đánh giá sản phẩm</h3>
+            <div class="reviews-list">
+                ${data.map(review => `
+                    <div class="review-item">
+                        <div class="review-header">
+                            <span class="review-user">${review.user_name}</span>
+                            <span class="review-rating">
+                                ${'★'.repeat(review.rating)}${'☆'.repeat(5-review.rating)}
+                            </span>
+                        </div>
+                        <div class="review-comment">${review.comment}</div>
+                        <div class="review-date">${new Date(review.created_at).toLocaleDateString()}</div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } catch (error) {
+        console.error('Lỗi khi tải đánh giá:', error);
+    }
+}
+
+// Thêm CSS cho phần đánh giá
+const style = document.createElement('style');
+style.textContent = `
+    .review-form {
+        margin: 20px 0;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+    }
+    
+    .rating {
+        margin: 10px 0;
+    }
+    
+    .star {
+        font-size: 24px;
+        color: #ccc;
+        cursor: pointer;
+        margin-right: 5px;
+    }
+    
+    .star:hover,
+    .star.active {
+        color: #ffd700;
+    }
+    
+    #reviewComment {
+        width: 100%;
+        min-height: 100px;
+        margin: 10px 0;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    
+    .review-item {
+        margin: 15px 0;
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .review-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+    
+    .review-user {
+        font-weight: bold;
+    }
+    
+    .review-rating {
+        color: #ffd700;
+    }
+    
+    .review-comment {
+        margin: 10px 0;
+    }
+    
+    .review-date {
+        color: #666;
+        font-size: 0.9em;
+    }
+`;
+document.head.appendChild(style);
+
+// Thêm form đánh giá vào trang chi tiết sản phẩm
+function showProductDetail(productId) {
+    // ... existing product detail code ...
+    
+    // Thêm phần đánh giá
+    const productDetail = document.querySelector('.product-detail');
+    if (productDetail) {
+        const reviewSection = document.createElement('div');
+        reviewSection.className = 'product-reviews';
+        productDetail.appendChild(reviewSection);
+        
+        // Kiểm tra xem người dùng đã mua sản phẩm chưa
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (user) {
+            fetch(`/api/admin/orders?user_id=${user.id}&product_id=${productId}`)
+                .then(response => response.json())
+                .then(orders => {
+                    if (orders.some(order => order.status === 'completed')) {
+                        const reviewForm = showReviewForm(productId);
+                        reviewSection.appendChild(reviewForm);
+                    }
+                });
+        }
+        
+        // Tải danh sách đánh giá
+        loadProductReviews(productId);
+    }
+}
+
+// Close Page Checkout
+function closecheckout() {
+    checkoutpage.classList.remove('active');
+    body.style.overflow = "auto";
 }
