@@ -72,6 +72,46 @@ router.post('/response', async (req, res) => {
     const lowerMessage = message.toLowerCase();
     
     try {
+        // Trả lời tự động về giới thiệu thương hiệu HungryHub
+        if (
+            lowerMessage.includes('giới thiệu') ||
+            lowerMessage.includes('thương hiệu') ||
+            lowerMessage.includes('hungryhub') ||
+            lowerMessage.includes('hungry hub')
+        ) {
+            return res.json({
+                response: 'HungryHub là thương hiệu nhà hàng nổi tiếng tại Đà Nẵng, chuyên phục vụ các món ăn ngon, đa dạng và chất lượng. Với không gian ấm cúng, đội ngũ nhân viên thân thiện, HungryHub cam kết mang đến trải nghiệm ẩm thực tuyệt vời cho mọi khách hàng. Chúng tôi tự hào là điểm đến lý tưởng cho các bữa ăn gia đình, gặp gỡ bạn bè và các dịp đặc biệt.'
+            });
+        }
+        // Trả lời tự động về giờ mở cửa
+        if (
+            lowerMessage.includes('giờ mở cửa') ||
+            lowerMessage.includes('mấy giờ mở cửa') ||
+            lowerMessage.includes('giờ hoạt động') ||
+            lowerMessage.includes('thời gian mở cửa') ||
+            lowerMessage.includes('giờ đóng cửa') ||
+            lowerMessage.includes('giờ làm việc')
+        ) {
+            return res.json({
+                response: 'HungryHub mở cửa từ 9:00 đến 22:30 các ngày trong tuần, và từ 9:00 đến 00:00 các ngày lễ.'
+            });
+        }
+        // Trả lời tự động về thông tin liên hệ
+        if (
+            lowerMessage.includes('liên hệ') ||
+            lowerMessage.includes('địa chỉ') ||
+            lowerMessage.includes('số điện thoại') ||
+            lowerMessage.includes('hotline') ||
+            lowerMessage.includes('email') ||
+            lowerMessage.includes('liên lạc')
+        ) {
+            return res.json({
+                response: 'Thông tin liên hệ HungryHub:\n' +
+                    '- Địa chỉ: 03 Quang Trung, Phường Hải Châu, Quận Hải Châu, TP.Đà Nẵng\n' +
+                    '- Số điện thoại: 0123 456 789 | 0987 654 321\n' +
+                    '- Email: abc@domain.com | infoabc@domain.com'
+            });
+        }
         // Kiểm tra câu hỏi về tổng số món
         if (lowerMessage.includes('tổng số') || lowerMessage.includes('tất cả') || lowerMessage.includes('bao nhiêu món')) {
             const summary = await getMenuSummary();

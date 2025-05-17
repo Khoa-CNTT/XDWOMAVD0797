@@ -7,6 +7,7 @@ const authRouter = require('./api/auth');
 const paymentRoutes = require('./api/payment');
 const ordersRouter = require('./api/orders');
 const chatbotRouter = require('./api/chatbot');
+const reviewRoutes = require('./api/review');
 const path = require('path');
 
 const app = express();
@@ -23,6 +24,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/orders', ordersRouter);
 app.use('/api/chatbot', chatbotRouter);
+app.use('/api/reviews', reviewRoutes);
 
 // Route cho trang chủ
 app.get('/', (req, res) => {
