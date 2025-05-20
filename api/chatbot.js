@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const connection = require('../config/database');
+const axios = require('axios');
+const removeAccents = require('remove-accents'); // npm install remove-accents
 
 // Thêm hàm helper để format số tiền
 function formatPrice(price) {
@@ -266,39 +268,86 @@ router.post('/response', async (req, res) => {
         // Kiểm tra câu hỏi về giá cụ thể
         else if (lowerMessage.includes('giá') || lowerMessage.includes('bao nhiêu')) {
             const searchTerm = lowerMessage.replace(/giá|bao nhiêu|tiền|đồng|đ|vnd|vnđ|cho|tôi|biết|món|đồ ăn|thực đơn/g, '').trim();
-            
             if (!searchTerm) {
                 res.json({ response: 'Bạn muốn biết giá của món nào?' });
                 return;
             }
-            
-            const [products] = await connection.promise().query(
-                'SELECT * FROM products WHERE status = 1 AND (title LIKE ? OR description LIKE ?) LIMIT 1',
-                [`%${searchTerm}%`, `%${searchTerm}%`]
+            const searchTermNoAccent = removeAccents(searchTerm.toLowerCase());
+            const [products] = await connection.promise().query('SELECT * FROM products WHERE status = 1');
+            const found = products.find(p =>
+                removeAccents((p.title || '').toLowerCase()).includes(searchTermNoAccent) ||
+                removeAccents((p.description || '').toLowerCase()).includes(searchTermNoAccent)
             );
-            
-            if (products.length > 0) {
-                const product = products[0];
+            if (found) {
                 res.json({ 
-                    response: `Món ${product.title} có giá ${formatPrice(product.price)}đ.`
+                    response: `Món ${found.title} có giá ${formatPrice(found.price)}đ.\nChi tiết: ${found.description || 'Không có mô tả.'}`
                 });
             } else {
                 res.json({ response: 'Xin lỗi, tôi không tìm thấy thông tin về món ăn này.' });
             }
         }
+        // Kiểm tra câu hỏi về đánh giá món ăn
+        else if (
+            lowerMessage.includes('đánh giá') ||
+            lowerMessage.includes('review') ||
+            lowerMessage.includes('sao')
+        ) {
+            const searchTerm = lowerMessage.replace(/đánh giá|review|sao|của|món|này|bao nhiêu|mấy|thế nào|cho|tôi|biết|về|được|/g, '').trim();
+            if (!searchTerm) {
+                return res.json({ response: 'Bạn muốn xem đánh giá của món nào?' });
+            }
+            const searchTermNoAccent = removeAccents(searchTerm.toLowerCase());
+            const [products] = await connection.promise().query('SELECT * FROM products WHERE status = 1');
+            const found = products.find(p =>
+                removeAccents((p.title || '').toLowerCase()).includes(searchTermNoAccent) ||
+                removeAccents((p.description || '').toLowerCase()).includes(searchTermNoAccent)
+            );
+            if (found) {
+                // Gọi API review
+                try {
+                    const reviewRes = await axios.get(`http://localhost:3000/api/reviews?product_id=${found.id}`);
+                    const reviews = reviewRes.data;
+                    if (reviews.length === 0) {
+                        return res.json({ response: `Món ${found.title} hiện chưa có đánh giá nào.` });
+                    }
+                    const avgStar = (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1);
+                    let reply = `Đánh giá cho món ${found.title}:\n- Số sao trung bình: ${avgStar}/5 (${reviews.length} đánh giá)\n`;
+                    reviews.forEach(r => {
+                        reply += `- ${r.user_name || 'Người dùng'}: ${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)} - ${r.comment}\n`;
+                    });
+                    return res.json({ response: reply });
+                } catch (err) {
+                    return res.json({ response: 'Xin lỗi, không lấy được đánh giá cho món này.' });
+                }
+            } else {
+                return res.json({ response: 'Xin lỗi, tôi không tìm thấy món ăn này.' });
+            }
+        }
         // Tìm kiếm câu trả lời thông thường
         else {
-            const [rows] = await connection.promise().query(
-                'SELECT response FROM chatbot_responses WHERE LOWER(question) LIKE LOWER(?)',
-                [`%${message}%`]
+            const searchTermNoAccent = removeAccents(message.toLowerCase());
+            const [products] = await connection.promise().query('SELECT * FROM products WHERE status = 1');
+            const found = products.find(p =>
+                removeAccents((p.title || '').toLowerCase()).includes(searchTermNoAccent) ||
+                removeAccents((p.description || '').toLowerCase()).includes(searchTermNoAccent)
             );
-
-            if (rows.length > 0) {
-                res.json({ response: rows[0].response });
-            } else {
+            if (found) {
                 res.json({ 
-                    response: 'Xin lỗi, tôi không hiểu câu hỏi của bạn. Bạn có thể hỏi về thực đơn, giá cả hoặc đặt hàng.' 
+                    response: `Món ${found.title} có giá ${formatPrice(found.price)}đ.\nChi tiết: ${found.description || 'Không có mô tả.'}`
                 });
+            } else {
+                // Nếu không tìm thấy sản phẩm, trả về câu trả lời mặc định
+                const [rows] = await connection.promise().query(
+                    'SELECT response FROM chatbot_responses WHERE LOWER(question) LIKE LOWER(?)',
+                    [`%${searchTermNoAccent}%`]
+                );
+                if (rows.length > 0) {
+                    res.json({ response: rows[0].response });
+                } else {
+                    res.json({ 
+                        response: 'Xin lỗi, tôi không hiểu câu hỏi của bạn. Bạn có thể hỏi về thực đơn, giá cả hoặc đặt hàng.' 
+                    });
+                }
             }
         }
     } catch (error) {

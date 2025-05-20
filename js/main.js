@@ -1350,33 +1350,62 @@ function searchProducts(mode) {
     let minPrice = document.getElementById("min-price").value;
     let maxPrice = document.getElementById("max-price").value;
 
-    // Log dữ liệu sản phẩm ban đầu
-    if (valeSearchInput.toLowerCase().includes('bánh')) {
-        console.log('--- KIỂM TRA TỰ ĐỘNG ---');
-        console.log('productAll:', productAll.map(p => ({title: p.title, category: p.category_name, status: p.status})));
-    }
-
     if (parseInt(minPrice) > parseInt(maxPrice) && minPrice != "" && maxPrice != "") {
         alert("Giá đã nhập sai !");
         return;
     }
 
-    // Lọc theo danh mục
+    // Lọc theo category_id (ép kiểu số)
     let result = valueCategory == "Tất cả" 
         ? productAll 
-        : productAll.filter(item => item.category_name == valueCategory);
+        : productAll.filter(item => Number(item.category_id) === Number(valueCategory));
 
-    // Lọc theo từ khóa tìm kiếm - cải thiện tìm kiếm
+    // Lọc theo từ khóa tìm kiếm - giữ nguyên phần cũ
     if (valeSearchInput != "") {
         const searchTerm = valeSearchInput.toLowerCase().trim();
+        
+        // Tạo mảng các từ khóa liên quan đến bánh
+        const relatedTerms = {
+            'bánh': ['bánh', 'cake', 'pastry', 'bánh ngọt', 'bánh mì', 'bánh kem', 'bánh quy', 'bánh tráng', 'bánh bao', 'bánh cuốn', 'bánh xèo', 'bánh trung thu', 'bánh chưng', 'bánh tét', 'bánh dẻo', 'bánh trôi', 'bánh chay', 'bánh đúc', 'bánh bèo', 'bánh đậu xanh', 'bánh flan', 'bánh tiramisu', 'bánh su kem', 'bánh gato', 'bánh sinh nhật'],
+            'cơm': ['cơm', 'rice', 'cơm rang', 'cơm gà', 'cơm sườn', 'cơm tấm', 'cơm chiên'],
+            'phở': ['phở', 'pho', 'phở bò', 'phở gà', 'phở tái', 'phở chín'],
+            'mì': ['mì', 'noodle', 'mì xào', 'mì gói', 'mì trộn', 'mì cay'],
+            'chè': ['chè', 'dessert', 'chè đậu', 'chè bưởi', 'chè khúc bạch', 'chè trôi nước']
+        };
+
+        // Tìm từ khóa chính trong relatedTerms
+        let searchTerms = [searchTerm];
+        for (let key in relatedTerms) {
+            if (searchTerm.includes(key)) {
+                searchTerms = searchTerms.concat(relatedTerms[key]);
+                break;
+            }
+        }
+
+        // Loại bỏ các từ trùng lặp
+        searchTerms = [...new Set(searchTerms)];
+
         result = result.filter(item => {
-            const title = item.title.toLowerCase();
+            const title = (item.title || '').toLowerCase();
             const category = (item.category_name || '').toLowerCase();
-            return title.includes(searchTerm) || category.includes(searchTerm);
+            const description = (item.description || '').toLowerCase();
+            
+            // Kiểm tra xem có từ khóa nào trong searchTerms khớp không
+            return searchTerms.some(term => 
+                title.includes(term) || 
+                category.includes(term) || 
+                description.includes(term)
+            );
         });
-        // Log kết quả lọc nếu tìm "bánh"
+
+        // Log để debug
         if (searchTerm.includes('bánh')) {
-            console.log('Kết quả sau lọc từ khóa:', result.map(p => ({title: p.title, category: p.category_name})));
+            console.log('Từ khóa tìm kiếm:', searchTerms);
+            console.log('Kết quả sau lọc:', result.map(p => ({
+                title: p.title,
+                category: p.category_name,
+                description: p.description
+            })));
         }
     }
 
@@ -1392,7 +1421,6 @@ function searchProducts(mode) {
     // Hiển thị kết quả
     switch (mode) {
         case 0:
-            // Reset tìm kiếm
             fetch('/api/products')
                 .then(response => response.json())
                 .then(products => {
@@ -1442,16 +1470,7 @@ function displayList(productAll, perPage, currentPage) {
 }
 
 function showHomeProduct(products) {
-    // Lấy danh sách danh mục duy nhất từ sản phẩm
-    const categories = [...new Set(products.map(p => p.category_name))].filter(Boolean);
-    
-    // Cập nhật select danh mục
-    const categorySelect = document.getElementById("advanced-search-category-select");
-    categorySelect.innerHTML = '<option value="Tất cả">Tất cả</option>';
-    categories.forEach(category => {
-        categorySelect.innerHTML += `<option value="${category}">${category}</option>`;
-    });
-    
+    // KHÔNG lấy danh mục từ sản phẩm nữa
     // Hiển thị sản phẩm PHÂN TRANG
     currentPage = 1; // Luôn về trang 1 khi load mới
     displayList(products, perPage, currentPage);
@@ -2090,4 +2109,19 @@ function closecheckout() {
     checkoutpage.classList.remove('active');
     body.style.overflow = "auto";
 }
+
+// Lấy danh mục từ API categories khi trang load
+// Đảm bảo chỉ chạy 1 lần khi DOMContentLoaded
+
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('/api/categories')
+      .then(res => res.json())
+      .then(categories => {
+          const categorySelect = document.getElementById("advanced-search-category-select");
+          categorySelect.innerHTML = '<option value="Tất cả">Tất cả</option>';
+          categories.forEach(cat => {
+              categorySelect.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+          });
+      });
+});
 
